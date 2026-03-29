@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAISS Cheatsheet</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f5f4f0; --bg3: #eeede8;
+    --text: #1a1a18; --text2: #5f5e5a; --text3: #888780;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.2);
+    --info-bg: #e6f1fb; --info-text: #185fa5;
+    --warn-bg: #faeeda; --warn-text: #854f0b;
+    --success-bg: #eaf3de; --success-text: #3b6d11;
+    --danger-bg: #fcebeb; --danger-text: #a32d2d;
+    --radius: 8px; --radius-lg: 12px;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font-sans: system-ui, -apple-system, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e1c; --bg2: #262624; --bg3: #2e2e2b;
+      --text: #e8e6dc; --text2: #9c9a92; --text3: #6b6a64;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.18);
+      --info-bg: #042c53; --info-text: #85b7eb;
+      --warn-bg: #412402; --warn-text: #fac775;
+      --success-bg: #173404; --success-text: #c0dd97;
+      --danger-bg: #501313; --danger-text: #f09595;
+    }
+  }
+  body { font-family: var(--font-mono); background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1.5rem; }
+  .root { max-width: 860px; margin: 0 auto; }
+  .header { margin-bottom: 1.8rem; }
+  .title { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; font-family: var(--font-sans); }
+  .subtitle { font-size: 13px; color: var(--text2); margin-top: 5px; font-family: var(--font-sans); }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .tab { padding: 7px 16px; font-size: 12px; font-weight: 500; border-radius: 20px; border: 0.5px solid var(--border2); cursor: pointer; background: transparent; color: var(--text2); transition: all .15s; font-family: var(--font-sans); }
+  .tab.active { background: var(--info-bg); color: var(--info-text); border-color: transparent; }
+  .tab:hover:not(.active) { background: var(--bg2); color: var(--text); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .section-title { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); margin: 1.4rem 0 0.6rem; font-family: var(--font-sans); }
+  .card { background: var(--bg2); border-radius: var(--radius); padding: 1rem 1.1rem; margin-bottom: 0.7rem; border: 0.5px solid var(--border); }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-family: var(--font-sans); }
+  .badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; font-family: var(--font-sans); }
+  .badge-green { background: var(--success-bg); color: var(--success-text); }
+  .badge-amber { background: var(--warn-bg); color: var(--warn-text); }
+  .badge-blue { background: var(--info-bg); color: var(--info-text); }
+  pre { font-size: 12.5px; line-height: 1.7; color: var(--text); overflow-x: auto; white-space: pre; font-family: var(--font-mono); }
+  .kw { color: #7f77dd; }
+  .fn { color: #1d9e75; }
+  .str { color: #ba7517; }
+  .cm { color: var(--text3); }
+  .num { color: #d85a30; }
+  .note { font-size: 12px; color: var(--text2); margin-top: 10px; padding-top: 10px; border-top: 0.5px solid var(--border); line-height: 1.6; font-family: var(--font-sans); }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: var(--font-sans); }
+  .compare-table th { text-align: left; padding: 7px 10px; font-weight: 600; color: var(--text2); border-bottom: 0.5px solid var(--border); }
+  .compare-table td { padding: 8px 10px; border-bottom: 0.5px solid var(--border); vertical-align: top; line-height: 1.5; }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table td:first-child { font-weight: 500; color: var(--text); white-space: nowrap; font-family: var(--font-mono); font-size: 11.5px; }
+  .compare-table td:not(:first-child) { color: var(--text2); }
+  .highlight-row td { background: var(--info-bg); color: var(--info-text) !important; }
+  .tip { background: var(--warn-bg); border-radius: 6px; padding: 9px 13px; font-size: 12px; color: var(--warn-text); margin-top: 10px; font-family: var(--font-sans); line-height: 1.5; }
+  .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+  .flow-step { background: var(--bg); border: 0.5px solid var(--border2); border-radius: 6px; padding: 5px 11px; font-size: 12px; font-weight: 500; font-family: var(--font-sans); }
+  .flow-arrow { color: var(--text3); font-size: 16px; }
+  code { font-family: var(--font-mono); font-size: 11.5px; background: var(--bg3); padding: 1px 5px; border-radius: 4px; }
+  @media(max-width:580px) { .two-col { grid-template-columns: 1fr; } body { padding: 1rem; } }
+</style>
+</head>
+<body>
+<div class="root">
+  <div class="header">
+    <div class="title">FAISS Cheatsheet</div>
+    <div class="subtitle">Facebook AI Similarity Search — patterns essentiels pour 80% des projets</div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="show('setup', this)">Setup</button>
+    <button class="tab" onclick="show('indexes', this)">Index types</button>
+    <button class="tab" onclick="show('ops', this)">Opérations</button>
+    <button class="tab" onclick="show('gpu', this)">GPU / Scale</button>
+    <button class="tab" onclick="show('patterns', this)">Patterns réels</button>
+  </div>
+
+  <!-- SETUP -->
+  <div id="tab-setup" class="panel active">
+    <div class="section-title">Installation</div>
+    <div class="card">
+      <div class="card-title">CPU <span class="badge badge-green">recommandé pour débuter</span></div>
+      <pre><span class="kw">pip</span> install faiss-cpu
+<span class="kw">pip</span> install faiss-gpu  <span class="cm"># si CUDA dispo</span></pre>
+    </div>
+    <div class="section-title">Workflow type</div>
+    <div class="card">
+      <div class="flow">
+        <div class="flow-step">Vecteurs numpy</div><div class="flow-arrow">→</div>
+        <div class="flow-step">Créer index</div><div class="flow-arrow">→</div>
+        <div class="flow-step">index.add()</div><div class="flow-arrow">→</div>
+        <div class="flow-step">index.search()</div><div class="flow-arrow">→</div>
+        <div class="flow-step">IDs + distances</div>
+      </div>
+    </div>
+    <div class="section-title">Code minimal complet</div>
+    <div class="card">
+      <pre><span class="kw">import</span> faiss
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+d = <span class="num">128</span>           <span class="cm"># dimension des vecteurs</span>
+n = <span class="num">10000</span>         <span class="cm"># nombre de vecteurs</span>
+
+<span class="cm"># FAISS exige float32 C-contiguous</span>
+xb = np.random.randn(n, d).astype(<span class="str">'float32'</span>)
+
+<span class="cm"># Créer + peupler l'index</span>
+index = faiss.<span class="fn">IndexFlatL2</span>(d)
+index.<span class="fn">add</span>(xb)
+
+<span class="cm"># Recherche des 5 plus proches voisins</span>
+xq = np.random.randn(<span class="num">3</span>, d).astype(<span class="str">'float32'</span>)
+D, I = index.<span class="fn">search</span>(xq, k=<span class="num">5</span>)
+<span class="cm"># D: distances (n_queries, k)  I: indices (n_queries, k)</span></pre>
+      <div class="note">⚡ Toujours <code>float32</code> et C-contiguous. Si erreur → <code>np.ascontiguousarray(x.astype('float32'))</code></div>
+    </div>
+  </div>
+
+  <!-- INDEX TYPES -->
+  <div id="tab-indexes" class="panel">
+    <div class="section-title">Choisir son index</div>
+    <div class="card">
+      <table class="compare-table">
+        <tr><th>Index</th><th>Use case</th><th>Speed</th><th>RAM</th><th>Précision</th></tr>
+        <tr class="highlight-row">
+          <td>IndexFlatL2</td><td>Exact search, baseline, &lt;1M vecs</td><td>lent</td><td>élevée</td><td>100%</td>
+        </tr>
+        <tr><td>IndexFlatIP</td><td>Cosine sim (avec normalisation)</td><td>lent</td><td>élevée</td><td>100%</td></tr>
+        <tr><td>IndexIVFFlat</td><td>ANN rapide, &gt;100k vecs</td><td>rapide</td><td>élevée</td><td>~98%</td></tr>
+        <tr><td>IndexIVFPQ</td><td>Millions de vecs, RAM limitée</td><td>très rapide</td><td>faible</td><td>~95%</td></tr>
+        <tr><td>IndexHNSW</td><td>ANN haute précision, no training</td><td>rapide</td><td>élevée</td><td>~99%</td></tr>
+        <tr><td>IndexPQ</td><td>Compression max, pas d'IVF</td><td>moyen</td><td>très faible</td><td>~90%</td></tr>
+      </table>
+      <div class="tip">🏆 Rule of thumb : &lt;100k → FlatL2 | 100k–10M → IVFFlat ou IVFPQ | &gt;10M → IVFPQ + GPU</div>
+    </div>
+    <div class="section-title">Création des index clés</div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">IVFFlat <span class="badge badge-amber">besoin train</span></div>
+        <pre><span class="cm"># nlist = nb de clusters (√n)</span>
+quantizer = faiss.<span class="fn">IndexFlatL2</span>(d)
+index = faiss.<span class="fn">IndexIVFFlat</span>(
+    quantizer, d, nlist=<span class="num">100</span>
+)
+index.<span class="fn">train</span>(xb)
+index.<span class="fn">add</span>(xb)
+index.nprobe = <span class="num">10</span>  <span class="cm"># clusters sondés</span></pre>
+      </div>
+      <div class="card">
+        <div class="card-title">IVFPQ <span class="badge badge-amber">besoin train</span></div>
+        <pre><span class="cm"># m=nb sous-vecteurs, bits/subvec</span>
+index = faiss.<span class="fn">IndexIVFPQ</span>(
+    quantizer, d,
+    nlist=<span class="num">100</span>, m=<span class="num">8</span>, nbits=<span class="num">8</span>
+)
+index.<span class="fn">train</span>(xb)
+index.<span class="fn">add</span>(xb)
+index.nprobe = <span class="num">10</span></pre>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">HNSW <span class="badge badge-green">no training</span></div>
+        <pre><span class="cm"># M = nb de liens par nœud</span>
+index = faiss.<span class="fn">IndexHNSWFlat</span>(
+    d, M=<span class="num">32</span>
+)
+index.<span class="fn">add</span>(xb)  <span class="cm"># pas de train()</span></pre>
+      </div>
+      <div class="card">
+        <div class="card-title">Cosine similarity</div>
+        <pre><span class="cm"># Normaliser → L2 = cosine</span>
+faiss.<span class="fn">normalize_L2</span>(xb)
+faiss.<span class="fn">normalize_L2</span>(xq)
+index = faiss.<span class="fn">IndexFlatIP</span>(d)
+index.<span class="fn">add</span>(xb)</pre>
+      </div>
+    </div>
+    <div class="section-title">String factory (notation compacte)</div>
+    <div class="card">
+      <pre><span class="cm"># Équivalent IVFPQ avec OPQ preprocessing</span>
+index = faiss.<span class="fn">index_factory</span>(
+    d, <span class="str">"OPQ16,IVF256,PQ16"</span>, faiss.METRIC_L2
+)
+<span class="cm"># Autres exemples : "Flat", "IVF100,Flat", "HNSW32"</span></pre>
+    </div>
+  </div>
+
+  <!-- OPERATIONS -->
+  <div id="tab-ops" class="panel">
+    <div class="section-title">Search</div>
+    <div class="card">
+      <pre><span class="cm"># k plus proches voisins</span>
+D, I = index.<span class="fn">search</span>(xq, k=<span class="num">10</span>)
+<span class="cm"># D: (n_queries, k) distances
+# I: (n_queries, k) indices (-1 si pas trouvé)</span>
+
+<span class="cm"># Search avec range (seuil de distance)</span>
+lims, D, I = index.<span class="fn">range_search</span>(xq, thresh=<span class="num">0.5</span>)
+<span class="cm"># lims[i]:lims[i+1] = slice des résultats de la requête i</span></pre>
+    </div>
+    <div class="section-title">IDs personnalisés</div>
+    <div class="card">
+      <div class="card-title">IndexIDMap <span class="badge badge-blue">wrapper</span></div>
+      <pre><span class="cm"># Mapper tes propres IDs (ex: DB ids)</span>
+base_index = faiss.<span class="fn">IndexFlatL2</span>(d)
+index = faiss.<span class="fn">IndexIDMap</span>(base_index)
+
+my_ids = np.array([<span class="num">100</span>, <span class="num">200</span>, <span class="num">300</span>], dtype=<span class="str">'int64'</span>)
+index.<span class="fn">add_with_ids</span>(xb[:3], my_ids)
+
+D, I = index.<span class="fn">search</span>(xq, k=<span class="num">2</span>)
+<span class="cm"># I contient tes IDs custom (100, 200...)</span></pre>
+    </div>
+    <div class="section-title">Sauvegarde / chargement</div>
+    <div class="card">
+      <pre><span class="cm"># Sauvegarder</span>
+faiss.<span class="fn">write_index</span>(index, <span class="str">"my_index.faiss"</span>)
+
+<span class="cm"># Charger</span>
+index = faiss.<span class="fn">read_index</span>(<span class="str">"my_index.faiss"</span>)</pre>
+    </div>
+    <div class="section-title">Supprimer des vecteurs</div>
+    <div class="card">
+      <pre><span class="cm"># Suppression par IDs (besoin IndexIDMap)</span>
+ids_to_remove = np.array([<span class="num">200</span>], dtype=<span class="str">'int64'</span>)
+index.<span class="fn">remove_ids</span>(faiss.IDSelectorArray(ids_to_remove))
+
+<span class="cm"># IndexFlatL2 ne supporte pas remove → reconstruire</span></pre>
+      <div class="note">⚠ Les index Flat ne supportent pas la suppression directe. Utiliser IDMap ou reconstruire.</div>
+    </div>
+    <div class="section-title">Infos sur l'index</div>
+    <div class="card">
+      <pre>index.ntotal      <span class="cm"># nb de vecteurs stockés</span>
+index.d           <span class="cm"># dimension</span>
+index.is_trained  <span class="cm"># bool</span>
+faiss.<span class="fn">vector_to_array</span>(index.xb)  <span class="cm"># récupérer vecs (FlatL2)</span></pre>
+    </div>
+  </div>
+
+  <!-- GPU -->
+  <div id="tab-gpu" class="panel">
+    <div class="section-title">CPU → GPU</div>
+    <div class="card">
+      <pre><span class="cm"># Convertir un index CPU en GPU</span>
+res = faiss.<span class="fn">StandardGpuResources</span>()
+index_gpu = faiss.<span class="fn">index_cpu_to_gpu</span>(
+    res, gpu_id=<span class="num">0</span>, index=index_cpu
+)
+
+<span class="cm"># Multi-GPU</span>
+index_gpu = faiss.<span class="fn">index_cpu_to_all_gpus</span>(index_cpu)</pre>
+    </div>
+    <div class="card">
+      <div class="card-title">GPU → CPU (pour sauvegarder)</div>
+      <pre>index_cpu = faiss.<span class="fn">index_gpu_to_cpu</span>(index_gpu)
+faiss.<span class="fn">write_index</span>(index_cpu, <span class="str">"saved.faiss"</span>)</pre>
+    </div>
+    <div class="section-title">Paramètres de perf</div>
+    <div class="card">
+      <table class="compare-table">
+        <tr><th>Param</th><th>Effet</th><th>Valeur suggérée</th></tr>
+        <tr><td>nprobe</td><td>Clusters sondés (IVF)</td><td>10–64 selon précision voulue</td></tr>
+        <tr><td>nlist</td><td>Nb de clusters IVF</td><td>4√n (ex: 1000 pour 1M vecs)</td></tr>
+        <tr><td>M (HNSW)</td><td>Liens par nœud</td><td>16–64</td></tr>
+        <tr><td>efSearch</td><td>Précision HNSW search</td><td>16–200</td></tr>
+        <tr><td>m (PQ)</td><td>Nb sous-vecteurs</td><td>d/4 ou d/8</td></tr>
+      </table>
+      <div class="tip">⚖ Trade-off : nprobe ↑ = précision ↑ mais speed ↓. Calibrer avec recall@k.</div>
+    </div>
+  </div>
+
+  <!-- PATTERNS RÉELS -->
+  <div id="tab-patterns" class="panel">
+    <div class="section-title">RAG / Semantic search</div>
+    <div class="card">
+      <div class="card-title">Pattern complet embeddings <span class="badge badge-blue">NLP</span></div>
+      <pre><span class="kw">from</span> sentence_transformers <span class="kw">import</span> SentenceTransformer
+<span class="kw">import</span> faiss, numpy <span class="kw">as</span> np
+
+model = <span class="fn">SentenceTransformer</span>(<span class="str">'all-MiniLM-L6-v2'</span>)
+docs = [<span class="str">"Hello world"</span>, <span class="str">"Faiss is fast"</span>, <span class="str">"AI rocks"</span>]
+
+<span class="cm"># Encoder les documents</span>
+embeddings = model.<span class="fn">encode</span>(docs).astype(<span class="str">'float32'</span>)
+d = embeddings.shape[<span class="num">1</span>]
+
+<span class="cm"># Créer index + ajouter</span>
+index = faiss.<span class="fn">IndexFlatIP</span>(d)
+faiss.<span class="fn">normalize_L2</span>(embeddings)
+index.<span class="fn">add</span>(embeddings)
+
+<span class="cm"># Query</span>
+q = model.<span class="fn">encode</span>([<span class="str">"fast search"</span>]).astype(<span class="str">'float32'</span>)
+faiss.<span class="fn">normalize_L2</span>(q)
+D, I = index.<span class="fn">search</span>(q, k=<span class="num">2</span>)
+<span class="cm"># Résultats : [docs[i] for i in I[0]]</span></pre>
+    </div>
+    <div class="section-title">Batch search efficace</div>
+    <div class="card">
+      <pre><span class="cm"># Toujours passer un batch plutôt que des boucles</span>
+<span class="cm"># ✗ Lent</span>
+<span class="kw">for</span> q <span class="kw">in</span> queries:
+    D, I = index.<span class="fn">search</span>(q[np.newaxis], k)
+
+<span class="cm"># ✓ Rapide (vectorisé)</span>
+queries = queries.astype(<span class="str">'float32'</span>)
+D, I = index.<span class="fn">search</span>(queries, k)</pre>
+    </div>
+    <div class="section-title">Reconstruction de vecteur</div>
+    <div class="card">
+      <pre><span class="cm"># Récupérer un vecteur par son index (FlatL2 seulement exact)</span>
+vec = index.<span class="fn">reconstruct</span>(<span class="num">42</span>)
+
+<span class="cm"># Plusieurs en une fois</span>
+vecs = index.<span class="fn">reconstruct_n</span>(start=<span class="num">0</span>, ni=<span class="num">100</span>)</pre>
+    </div>
+    <div class="section-title">Pièges fréquents</div>
+    <div class="card">
+      <table class="compare-table">
+        <tr><th>Erreur</th><th>Fix</th></tr>
+        <tr><td>dtype pas float32</td><td>.astype('float32')</td></tr>
+        <tr><td>Array non C-contiguous</td><td>np.ascontiguousarray(x)</td></tr>
+        <tr><td>Index pas entraîné</td><td>Appeler index.train(xb) avant add()</td></tr>
+        <tr><td>nlist &gt; n vecteurs</td><td>nlist ≤ n/39 minimum</td></tr>
+        <tr><td>I retourne -1</td><td>k demandé &gt; ntotal ou index vide</td></tr>
+        <tr><td>GPU OutOfMemory</td><td>Utiliser IndexIVFPQ pour compresser</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(tab, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

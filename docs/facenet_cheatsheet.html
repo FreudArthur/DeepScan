@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FaceNet Cheatsheet</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f5f4f0; --bg3: #eeede8;
+    --text: #1a1a18; --text2: #5f5e5a; --text3: #888780;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.2);
+    --info-bg: #e6f1fb; --info-text: #185fa5;
+    --warn-bg: #faeeda; --warn-text: #854f0b;
+    --success-bg: #eaf3de; --success-text: #3b6d11;
+    --danger-bg: #fcebeb; --danger-text: #a32d2d;
+    --purple-bg: #eeedfe; --purple-text: #534ab7;
+    --teal-bg: #e1f5ee; --teal-text: #0f6e56;
+    --radius: 8px; --radius-lg: 12px;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font-sans: system-ui, -apple-system, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e1c; --bg2: #262624; --bg3: #2e2e2b;
+      --text: #e8e6dc; --text2: #9c9a92; --text3: #6b6a64;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.18);
+      --info-bg: #042c53; --info-text: #85b7eb;
+      --warn-bg: #412402; --warn-text: #fac775;
+      --success-bg: #173404; --success-text: #c0dd97;
+      --danger-bg: #501313; --danger-text: #f09595;
+      --purple-bg: #26215c; --purple-text: #afa9ec;
+      --teal-bg: #04342c; --teal-text: #5dcaa5;
+    }
+  }
+  body { font-family: var(--font-mono); background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1.5rem; }
+  .root { max-width: 860px; margin: 0 auto; }
+  .header { margin-bottom: 1.8rem; display: flex; align-items: flex-start; gap: 1rem; }
+  .header-icon { width: 44px; height: 44px; border-radius: 10px; background: var(--teal-bg); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+  .header-icon svg { width: 22px; height: 22px; }
+  .title { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; font-family: var(--font-sans); }
+  .subtitle { font-size: 13px; color: var(--text2); margin-top: 5px; font-family: var(--font-sans); line-height: 1.5; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .tab { padding: 7px 16px; font-size: 12px; font-weight: 500; border-radius: 20px; border: 0.5px solid var(--border2); cursor: pointer; background: transparent; color: var(--text2); transition: all .15s; font-family: var(--font-sans); }
+  .tab.active { background: var(--teal-bg); color: var(--teal-text); border-color: transparent; }
+  .tab:hover:not(.active) { background: var(--bg2); color: var(--text); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .section-title { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); margin: 1.4rem 0 0.6rem; font-family: var(--font-sans); }
+  .card { background: var(--bg2); border-radius: var(--radius); padding: 1rem 1.1rem; margin-bottom: 0.7rem; border: 0.5px solid var(--border); }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-family: var(--font-sans); }
+  .badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; font-family: var(--font-sans); white-space: nowrap; }
+  .badge-green { background: var(--success-bg); color: var(--success-text); }
+  .badge-amber { background: var(--warn-bg); color: var(--warn-text); }
+  .badge-blue { background: var(--info-bg); color: var(--info-text); }
+  .badge-purple { background: var(--purple-bg); color: var(--purple-text); }
+  .badge-teal { background: var(--teal-bg); color: var(--teal-text); }
+  .badge-red { background: var(--danger-bg); color: var(--danger-text); }
+  pre { font-size: 12.5px; line-height: 1.7; color: var(--text); overflow-x: auto; white-space: pre; font-family: var(--font-mono); }
+  .kw { color: #7f77dd; }
+  .fn { color: #1d9e75; }
+  .str { color: #ba7517; }
+  .cm { color: var(--text3); }
+  .num { color: #d85a30; }
+  .note { font-size: 12px; color: var(--text2); margin-top: 10px; padding-top: 10px; border-top: 0.5px solid var(--border); line-height: 1.6; font-family: var(--font-sans); }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: var(--font-sans); }
+  .compare-table th { text-align: left; padding: 7px 10px; font-weight: 600; color: var(--text2); border-bottom: 0.5px solid var(--border); }
+  .compare-table td { padding: 8px 10px; border-bottom: 0.5px solid var(--border); vertical-align: top; line-height: 1.5; }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table td:first-child { font-weight: 500; color: var(--text); white-space: nowrap; font-family: var(--font-mono); font-size: 11.5px; }
+  .compare-table td:not(:first-child) { color: var(--text2); }
+  .highlight-row td { background: var(--teal-bg); color: var(--teal-text) !important; }
+  .tip { background: var(--warn-bg); border-radius: 6px; padding: 9px 13px; font-size: 12px; color: var(--warn-text); margin-top: 10px; font-family: var(--font-sans); line-height: 1.5; }
+  .info-box { background: var(--info-bg); border-radius: 6px; padding: 9px 13px; font-size: 12px; color: var(--info-text); margin-top: 10px; font-family: var(--font-sans); line-height: 1.5; }
+  .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+  .flow-step { background: var(--bg); border: 0.5px solid var(--border2); border-radius: 6px; padding: 5px 11px; font-size: 12px; font-weight: 500; font-family: var(--font-sans); }
+  .flow-arrow { color: var(--text3); font-size: 16px; }
+  code { font-family: var(--font-mono); font-size: 11.5px; background: var(--bg3); padding: 1px 5px; border-radius: 4px; }
+  .threshold-demo { display: flex; align-items: center; gap: 12px; margin: 10px 0 4px; flex-wrap: wrap; }
+  .threshold-bar { flex: 1; min-width: 180px; height: 8px; border-radius: 4px; background: linear-gradient(to right, var(--success-bg) 0%, var(--success-bg) 50%, var(--danger-bg) 50%, var(--danger-bg) 100%); position: relative; border: 0.5px solid var(--border); }
+  .threshold-marker { position: absolute; top: -4px; left: 50%; width: 2px; height: 16px; background: var(--text2); border-radius: 1px; transform: translateX(-50%); }
+  .threshold-label { font-size: 11px; font-family: var(--font-sans); color: var(--text2); }
+  @media(max-width:580px) { .two-col { grid-template-columns: 1fr; } body { padding: 1rem; } }
+</style>
+</head>
+<body>
+<div class="root">
+  <div class="header">
+    <div class="header-icon">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="8" r="4" stroke="#0f6e56" stroke-width="1.5"/>
+        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#0f6e56" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M17 4l1.5 1.5M19 8h2M17 12l1.5-1.5" stroke="#5dcaa5" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="title">FaceNet Cheatsheet</div>
+      <div class="subtitle">Face recognition via embeddings 512-d — vérification, identification, clustering</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="show('concept', this)">Concept</button>
+    <button class="tab" onclick="show('setup', this)">Setup</button>
+    <button class="tab" onclick="show('core', this)">Core ops</button>
+    <button class="tab" onclick="show('pipeline', this)">Pipeline complet</button>
+    <button class="tab" onclick="show('tips', this)">Tuning & pièges</button>
+  </div>
+
+  <!-- CONCEPT -->
+  <div id="tab-concept" class="panel active">
+    <div class="section-title">Comment ça marche</div>
+    <div class="card">
+      <div class="card-title">Principe fondamental</div>
+      <div class="flow">
+        <div class="flow-step">Image visage</div><div class="flow-arrow">→</div>
+        <div class="flow-step">Détection + crop</div><div class="flow-arrow">→</div>
+        <div class="flow-step">FaceNet CNN</div><div class="flow-arrow">→</div>
+        <div class="flow-step">Embedding 512-d</div><div class="flow-arrow">→</div>
+        <div class="flow-step">Distance L2 / cosine</div>
+      </div>
+      <div class="note">FaceNet ne classifie pas directement. Il projette chaque visage dans un espace métrique où <strong>même personne → vecteurs proches</strong>, personnes différentes → vecteurs loin.</div>
+    </div>
+    <div class="section-title">Triplet Loss (intuition)</div>
+    <div class="card">
+      <pre><span class="cm"># Entraîné avec des triplets (anchor, positive, negative)</span>
+<span class="cm"># anchor   = visage de référence</span>
+<span class="cm"># positive = même personne, image différente</span>
+<span class="cm"># negative = personne différente</span>
+
+<span class="cm"># Objectif :</span>
+<span class="cm"># dist(anchor, positive) + margin &lt; dist(anchor, negative)</span>
+<span class="cm"># → "serre les même, éloigne les différents"</span></pre>
+    </div>
+    <div class="section-title">3 tâches possibles</div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Vérification <span class="badge badge-blue">1:1</span></div>
+        <pre><span class="cm"># "Est-ce la même personne ?"</span>
+dist = <span class="fn">distance</span>(emb_A, emb_B)
+same = dist &lt; threshold
+<span class="cm"># Seuil typique : 0.6–1.0 (L2)</span></pre>
+      </div>
+      <div class="card">
+        <div class="card-title">Identification <span class="badge badge-purple">1:N</span></div>
+        <pre><span class="cm"># "Qui est cette personne ?"</span>
+<span class="cm"># Chercher le + proche dans la DB</span>
+dists = [<span class="fn">dist</span>(emb_q, e) <span class="kw">for</span> e <span class="kw">in</span> db]
+idx = np.<span class="fn">argmin</span>(dists)
+<span class="cm"># Si dists[idx] &lt; thresh → match</span></pre>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Clustering <span class="badge badge-teal">N:N</span></div>
+      <pre><span class="cm"># "Regrouper des visages inconnus"</span>
+<span class="kw">from</span> sklearn.cluster <span class="kw">import</span> DBSCAN
+labels = DBSCAN(eps=<span class="num">0.5</span>, metric=<span class="str">'euclidean'</span>).<span class="fn">fit_predict</span>(embeddings)
+<span class="cm"># labels[i] = id du cluster, -1 = outlier</span></pre>
+    </div>
+    <div class="section-title">Seuil de distance</div>
+    <div class="card">
+      <div class="threshold-demo">
+        <span class="threshold-label" style="color:var(--success-text)">Même personne</span>
+        <div class="threshold-bar"><div class="threshold-marker"></div></div>
+        <span class="threshold-label" style="color:var(--danger-text)">Personnes différentes</span>
+      </div>
+      <div style="text-align:center;font-size:11px;color:var(--text3);font-family:var(--font-sans);margin-top:4px;">threshold ≈ 0.6–1.0 (L2) &nbsp;|&nbsp; ≈ 0.4 (cosine)</div>
+      <div class="note">Le seuil idéal dépend de ton dataset. Calibre-le sur un val set avec des paires labeled (même / différent).</div>
+    </div>
+  </div>
+
+  <!-- SETUP -->
+  <div id="tab-setup" class="panel">
+    <div class="section-title">Librairies principales</div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">facenet-pytorch <span class="badge badge-green">recommandé</span></div>
+        <pre><span class="kw">pip</span> install facenet-pytorch
+<span class="cm"># MTCNN (détection) + InceptionResnetV1</span>
+<span class="cm"># Poids pretrained : VGGFace2 ou CASIA-Webface</span></pre>
+      </div>
+      <div class="card">
+        <div class="card-title">deepface <span class="badge badge-blue">multi-modèle</span></div>
+        <pre><span class="kw">pip</span> install deepface
+<span class="cm"># Wrapper haut niveau</span>
+<span class="cm"># Supporte FaceNet, ArcFace,</span>
+<span class="cm"># VGG-Face, DeepFace...</span></pre>
+      </div>
+    </div>
+    <div class="section-title">Initialisation facenet-pytorch</div>
+    <div class="card">
+      <pre><span class="kw">from</span> facenet_pytorch <span class="kw">import</span> MTCNN, InceptionResnetV1
+<span class="kw">import</span> torch
+
+device = <span class="str">'cuda'</span> <span class="kw">if</span> torch.cuda.<span class="fn">is_available</span>() <span class="kw">else</span> <span class="str">'cpu'</span>
+
+<span class="cm"># Détecteur de visages</span>
+mtcnn = <span class="fn">MTCNN</span>(
+    image_size=<span class="num">160</span>,       <span class="cm"># taille output crop</span>
+    keep_all=<span class="num">False</span>,       <span class="cm"># True → tous les visages</span>
+    min_face_size=<span class="num">20</span>,     <span class="cm"># ignorer petits visages</span>
+    device=device
+)
+
+<span class="cm"># Modèle d'embedding</span>
+resnet = <span class="fn">InceptionResnetV1</span>(
+    pretrained=<span class="str">'vggface2'</span>  <span class="cm"># ou 'casia-webface'</span>
+).<span class="fn">eval</span>().<span class="fn">to</span>(device)</pre>
+      <div class="note">VGGFace2 = meilleur en général. CASIA-Webface = plus léger, moins précis sur variations de pose.</div>
+    </div>
+    <div class="section-title">Deepface (alternative rapide)</div>
+    <div class="card">
+      <pre><span class="kw">from</span> deepface <span class="kw">import</span> DeepFace
+
+<span class="cm"># Vérification directe (2 images)</span>
+result = DeepFace.<span class="fn">verify</span>(
+    img1_path=<span class="str">"img1.jpg"</span>,
+    img2_path=<span class="str">"img2.jpg"</span>,
+    model_name=<span class="str">"Facenet512"</span>  <span class="cm"># ou "Facenet"</span>
+)
+<span class="cm"># result["verified"] → bool</span>
+<span class="cm"># result["distance"] → float</span></pre>
+    </div>
+  </div>
+
+  <!-- CORE OPS -->
+  <div id="tab-core" class="panel">
+    <div class="section-title">Extraire un embedding</div>
+    <div class="card">
+      <pre><span class="kw">from</span> PIL <span class="kw">import</span> Image
+<span class="kw">import</span> torch
+
+img = Image.<span class="fn">open</span>(<span class="str">"face.jpg"</span>)
+
+<span class="cm"># Étape 1 : détecter + aligner + crop</span>
+face_tensor = <span class="fn">mtcnn</span>(img)        <span class="cm"># → (3, 160, 160) ou None</span>
+
+<span class="kw">if</span> face_tensor <span class="kw">is</span> <span class="kw">not</span> None:
+    face_tensor = face_tensor.<span class="fn">unsqueeze</span>(<span class="num">0</span>).<span class="fn">to</span>(device)  <span class="cm"># (1,3,160,160)</span>
+
+    <span class="cm"># Étape 2 : embedding</span>
+    <span class="kw">with</span> torch.no_grad():
+        emb = resnet(face_tensor)      <span class="cm"># → (1, 512)</span>
+        emb = emb.<span class="fn">squeeze</span>()          <span class="cm"># → (512,)</span>
+        emb = emb.<span class="fn">cpu</span>().<span class="fn">numpy</span>()       <span class="cm"># → np.array (512,)</span></pre>
+      <div class="note">L'embedding est déjà L2-normalisé par défaut dans InceptionResnetV1. Si tu utilises un autre modèle, normalise manuellement.</div>
+    </div>
+    <div class="section-title">Batch d'images</div>
+    <div class="card">
+      <pre><span class="kw">from</span> PIL <span class="kw">import</span> Image
+<span class="kw">import</span> torch
+
+imgs = [Image.<span class="fn">open</span>(p) <span class="kw">for</span> p <span class="kw">in</span> paths]
+
+<span class="cm"># MTCNN batch → liste de tensors ou None</span>
+faces = <span class="fn">mtcnn</span>(imgs)              <span class="cm"># liste de (3,160,160)</span>
+
+<span class="cm"># Filtrer les None</span>
+valid = [(i, f) <span class="kw">for</span> i, f <span class="kw">in</span> <span class="fn">enumerate</span>(faces) <span class="kw">if</span> f <span class="kw">is</span> <span class="kw">not</span> None]
+idxs, tensors = <span class="fn">zip</span>(*valid)
+
+batch = torch.<span class="fn">stack</span>(tensors).<span class="fn">to</span>(device)  <span class="cm"># (N, 3, 160, 160)</span>
+<span class="kw">with</span> torch.no_grad():
+    embs = resnet(batch).<span class="fn">cpu</span>().<span class="fn">numpy</span>()  <span class="cm"># (N, 512)</span></pre>
+    </div>
+    <div class="section-title">Distances</div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Distance L2</div>
+        <pre><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+dist = np.<span class="fn">linalg.norm</span>(emb_a - emb_b)
+<span class="cm"># Seuil recommandé : &lt; 0.6–1.0</span>
+same = dist &lt; <span class="num">0.8</span></pre>
+      </div>
+      <div class="card">
+        <div class="card-title">Cosine similarity</div>
+        <pre><span class="kw">from</span> numpy.linalg <span class="kw">import</span> norm
+
+cos_sim = np.<span class="fn">dot</span>(emb_a, emb_b) / (
+    <span class="fn">norm</span>(emb_a) * <span class="fn">norm</span>(emb_b)
+)
+<span class="cm"># cos_sim ∈ [-1, 1], &gt; 0.9 = même</span></pre>
+      </div>
+    </div>
+    <div class="section-title">Vérification 1:1</div>
+    <div class="card">
+      <pre><span class="kw">def</span> <span class="fn">verify</span>(img1_path, img2_path, threshold=<span class="num">0.8</span>):
+    emb1 = <span class="fn">get_embedding</span>(img1_path)
+    emb2 = <span class="fn">get_embedding</span>(img2_path)
+    <span class="kw">if</span> emb1 <span class="kw">is</span> None <span class="kw">or</span> emb2 <span class="kw">is</span> None:
+        <span class="kw">return</span> None
+    dist = np.<span class="fn">linalg.norm</span>(emb1 - emb2)
+    <span class="kw">return</span> {<span class="str">"verified"</span>: dist &lt; threshold, <span class="str">"distance"</span>: <span class="fn">float</span>(dist)}</pre>
+    </div>
+  </div>
+
+  <!-- PIPELINE COMPLET -->
+  <div id="tab-pipeline" class="panel">
+    <div class="section-title">Face recognition system (1:N)</div>
+    <div class="card">
+      <div class="card-title">Construire une base d'embeddings <span class="badge badge-teal">enrollment</span></div>
+      <pre><span class="kw">import</span> numpy <span class="kw">as</span> np, pickle
+<span class="kw">from</span> pathlib <span class="kw">import</span> Path
+
+db_embeddings = []
+db_labels = []
+
+<span class="kw">for</span> person_dir <span class="kw">in</span> Path(<span class="str">"faces_db/"</span>).<span class="fn">iterdir</span>():
+    name = person_dir.name
+    <span class="kw">for</span> img_path <span class="kw">in</span> person_dir.<span class="fn">glob</span>(<span class="str">"*.jpg"</span>):
+        emb = <span class="fn">get_embedding</span>(<span class="fn">str</span>(img_path))
+        <span class="kw">if</span> emb <span class="kw">is</span> <span class="kw">not</span> None:
+            db_embeddings.<span class="fn">append</span>(emb)
+            db_labels.<span class="fn">append</span>(name)
+
+db_embeddings = np.<span class="fn">array</span>(db_embeddings)  <span class="cm"># (N, 512)</span>
+<span class="cm"># Sauvegarder</span>
+<span class="kw">with</span> <span class="fn">open</span>(<span class="str">"face_db.pkl"</span>, <span class="str">"wb"</span>) <span class="kw">as</span> f:
+    pickle.<span class="fn">dump</span>((db_embeddings, db_labels), f)</pre>
+    </div>
+    <div class="card">
+      <div class="card-title">Reconnaissance (query) <span class="badge badge-purple">1:N</span></div>
+      <pre><span class="kw">def</span> <span class="fn">recognize</span>(img_path, db_embs, db_labels, threshold=<span class="num">0.8</span>):
+    query_emb = <span class="fn">get_embedding</span>(img_path)
+    <span class="kw">if</span> query_emb <span class="kw">is</span> None:
+        <span class="kw">return</span> <span class="str">"no_face"</span>
+
+    <span class="cm"># Distances avec toute la DB</span>
+    dists = np.<span class="fn">linalg.norm</span>(db_embs - query_emb, axis=<span class="num">1</span>)
+    idx = np.<span class="fn">argmin</span>(dists)
+
+    <span class="kw">if</span> dists[idx] &lt; threshold:
+        <span class="kw">return</span> db_labels[idx], dists[idx]
+    <span class="kw">return</span> <span class="str">"unknown"</span>, dists[idx]</pre>
+    </div>
+    <div class="section-title">Avec FAISS (grande DB)</div>
+    <div class="card">
+      <div class="card-title">FaceNet + FAISS <span class="badge badge-amber">scalable</span></div>
+      <pre><span class="kw">import</span> faiss
+
+d = <span class="num">512</span>
+index = faiss.<span class="fn">IndexFlatIP</span>(d)   <span class="cm"># cosine si embeddings normalisés</span>
+
+<span class="cm"># Embeddings déjà L2-normalisés → IndexFlatIP = cosine</span>
+index.<span class="fn">add</span>(db_embeddings.astype(<span class="str">'float32'</span>))
+
+<span class="cm"># Query</span>
+query = query_emb[np.newaxis].astype(<span class="str">'float32'</span>)
+D, I = index.<span class="fn">search</span>(query, k=<span class="num">1</span>)
+
+cos_sim = D[<span class="num">0</span>][<span class="num">0</span>]
+best_idx = I[<span class="num">0</span>][<span class="num">0</span>]
+
+<span class="kw">if</span> cos_sim > <span class="num">0.6</span>:  <span class="cm"># seuil cosine</span>
+    <span class="kw">print</span>(db_labels[best_idx])</pre>
+      <div class="note">Les embeddings InceptionResnetV1 sont L2-normalisés → IndexFlatIP = cosine similarity directement. Pas besoin de normalize_L2 supplémentaire.</div>
+    </div>
+    <div class="section-title">Clustering (visages inconnus)</div>
+    <div class="card">
+      <pre><span class="kw">from</span> sklearn.cluster <span class="kw">import</span> DBSCAN
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cm"># DBSCAN est le meilleur choix : pas besoin de spécifier k</span>
+clustering = <span class="fn">DBSCAN</span>(
+    eps=<span class="num">0.5</span>,          <span class="cm"># rayon de voisinage (calibrer !)</span>
+    min_samples=<span class="num">2</span>,    <span class="cm"># min visages par cluster</span>
+    metric=<span class="str">'euclidean'</span>
+).<span class="fn">fit</span>(db_embeddings)
+
+labels = clustering.labels_
+n_people = <span class="fn">len</span>(<span class="fn">set</span>(labels)) - (<span class="num">1</span> <span class="kw">if</span> -<span class="num">1</span> <span class="kw">in</span> labels <span class="kw">else</span> <span class="num">0</span>)
+<span class="cm"># labels[i] = -1 → outlier (visage isolé)</span></pre>
+    </div>
+  </div>
+
+  <!-- TUNING & PIÈGES -->
+  <div id="tab-tips" class="panel">
+    <div class="section-title">Preprocessing important</div>
+    <div class="card">
+      <pre><span class="cm"># MTCNN fait déjà : détection + alignement + crop</span>
+<span class="cm"># Mais si image de mauvaise qualité :</span>
+
+mtcnn_strict = <span class="fn">MTCNN</span>(
+    image_size=<span class="num">160</span>,
+    margin=<span class="num">20</span>,          <span class="cm"># ajouter de la marge autour du visage</span>
+    min_face_size=<span class="num">40</span>,   <span class="cm"># ignorer les très petits visages</span>
+    thresholds=[<span class="num">0.7</span>, <span class="num">0.8</span>, <span class="num">0.9</span>],  <span class="cm"># seuils de détection</span>
+    factor=<span class="num">0.709</span>,       <span class="cm"># scale factor</span>
+    keep_all=<span class="num">True</span>        <span class="cm"># tous les visages dans l'image</span>
+)</pre>
+    </div>
+    <div class="section-title">Normalisation manuelle</div>
+    <div class="card">
+      <pre><span class="cm"># Si tu n'utilises pas InceptionResnetV1 (autre modèle)</span>
+<span class="cm"># → toujours normaliser L2 avant comparaison</span>
+emb = emb / np.<span class="fn">linalg.norm</span>(emb)
+
+<span class="cm"># Ou en batch</span>
+embs = embs / np.<span class="fn">linalg.norm</span>(embs, axis=<span class="num">1</span>, keepdims=<span class="num">True</span>)</pre>
+    </div>
+    <div class="section-title">Calibrer le seuil</div>
+    <div class="card">
+      <pre><span class="kw">from</span> sklearn.metrics <span class="kw">import</span> roc_curve
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cm"># paires = [(emb_a, emb_b, is_same), ...]</span>
+dists = [np.<span class="fn">linalg.norm</span>(a - b) <span class="kw">for</span> a, b, _ <span class="kw">in</span> paires]
+labels = [s <span class="kw">for</span> _, _, s <span class="kw">in</span> paires]
+
+fpr, tpr, thresholds = <span class="fn">roc_curve</span>(labels, [-d <span class="kw">for</span> d <span class="kw">in</span> dists])
+<span class="cm"># Choisir threshold à FPR = 0.01 (1% faux positifs)</span>
+best_thresh = thresholds[np.<span class="fn">argmax</span>(tpr[fpr &lt;= <span class="num">0.01</span>])]</pre>
+    </div>
+    <div class="section-title">Pièges fréquents</div>
+    <div class="card">
+      <table class="compare-table">
+        <tr><th>Problème</th><th>Cause</th><th>Fix</th></tr>
+        <tr><td>mtcnn() retourne None</td><td>Pas de visage détecté</td><td>Vérifier résolution, min_face_size, qualité</td></tr>
+        <tr><td>Embeddings tous proches</td><td>Pas de normalisation L2</td><td>emb / norm(emb)</td></tr>
+        <tr><td>Seuil trop strict</td><td>FP élevés avec seuil bas</td><td>Calibrer sur val set avec ROC curve</td></tr>
+        <tr><td>Mauvaises perfs pose</td><td>VGGFace2 meilleur en général</td><td>Tester les 2 pretrained</td></tr>
+        <tr><td>Lenteur sur CPU</td><td>Batch trop petit</td><td>Batches de 32+ images</td></tr>
+        <tr><td>keep_all=False + groupe</td><td>Détecte qu'un seul visage</td><td>keep_all=True pour multi-face</td></tr>
+      </table>
+    </div>
+    <div class="section-title">Seuils de référence</div>
+    <div class="card">
+      <table class="compare-table">
+        <tr><th>Métrique</th><th>Même personne</th><th>Personnes différentes</th><th>Seuil typique</th></tr>
+        <tr class="highlight-row"><td>L2 distance</td><td>&lt; 0.8</td><td>&gt; 1.0</td><td>0.6–1.0</td></tr>
+        <tr><td>Cosine sim</td><td>&gt; 0.9</td><td>&lt; 0.6</td><td>0.8–0.9</td></tr>
+        <tr><td>Cosine dist</td><td>&lt; 0.4</td><td>&gt; 0.6</td><td>0.4–0.5</td></tr>
+      </table>
+      <div class="tip">⚠ Ces seuils varient selon le pretrained utilisé (VGGFace2 vs CASIA). Toujours calibrer sur ton propre dataset.</div>
+    </div>
+    <div class="section-title">Moyenne d'embeddings (robustesse)</div>
+    <div class="card">
+      <pre><span class="cm"># Enrollment avec plusieurs photos → embedding moyen</span>
+<span class="cm"># Plus robuste que comparer 1 seule photo</span>
+
+embs_person = [<span class="fn">get_embedding</span>(p) <span class="kw">for</span> p <span class="kw">in</span> photos_of_person]
+embs_person = [e <span class="kw">for</span> e <span class="kw">in</span> embs_person <span class="kw">if</span> e <span class="kw">is</span> <span class="kw">not</span> None]
+mean_emb = np.<span class="fn">mean</span>(embs_person, axis=<span class="num">0</span>)
+mean_emb = mean_emb / np.<span class="fn">linalg.norm</span>(mean_emb)  <span class="cm"># re-normaliser</span></pre>
+      <div class="info-box">💡 Avec 5–10 photos par personne + embedding moyen, les perfs montent significativement même sur des datasets difficiles.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(tab, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+faiss:
+  metric: L2  # ou cosine
+  top_k: 3  # Top-K resultat
+  index_type: IndexFlatL2
+  distance_threshold: 0.75

@@ -1,0 +1,6 @@
+storage:
+  faiss_index_path: ../data/faiss.index
+  metadata_json: ../data/metadata.json
+  photos_dir: ../data/images
+  embeddings_cache: ../data/embeddings.npy
+  mapping_json : ../data/mapping.json

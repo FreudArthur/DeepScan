@@ -1,0 +1,6 @@
+face_recognition:
+    model_name: face_recognition_facenet
+    params:
+        distance_threshold: 0.75
+        model_path: ../../../data/models/face_recognition_facenet/squeezenet_VGGFace2/model-20180204-160909.ckpt-266000
+        use_cuda: False

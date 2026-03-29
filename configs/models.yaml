@@ -1,0 +1,11 @@
+detection:
+  model: mtcnn
+  device: cpu  # pas de gpu normalement
+  thresholds: [0.6, 0.7, 0.7]  # pnet, rnet, onet
+
+embedding:
+  model: inception_resnetv1
+  pretrained: vggface2
+  input_size: [3, 160, 160]
+  embedding_dim: 512
+  device: cpu
