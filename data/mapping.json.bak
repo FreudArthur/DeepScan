@@ -14,9 +14,5 @@
   "3": {
     "name": "Bill Gates",
     "image_path": "..\\data\\images\\bill.jpg"
-  },
-  "4": {
-    "name": "Mark Zuckerberg",
-    "image_path": "..\\data\\images\\markzuck.jpg"
   }
 }
