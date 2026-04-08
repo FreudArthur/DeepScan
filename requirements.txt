@@ -6,3 +6,5 @@ opencv-python
 torch
 matplotlib
 yaml
+streamlit
+streamlit_option_menu

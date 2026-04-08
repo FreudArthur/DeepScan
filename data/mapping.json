@@ -18,5 +18,9 @@
   "4": {
     "name": "Laurent",
     "image_path": "..\\data\\images\\Laurent.jpg"
+  },
+  "5": {
+    "name": "Freud",
+    "image_path": "..\\data\\images\\freud.jpg"
   }
 }
