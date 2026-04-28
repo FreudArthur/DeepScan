@@ -1,29 +1,63 @@
 import streamlit as st
+from pathlib import Path
+import sys
+import time
+
+# Add src folder to path so we can import pipeline_save_image
+ROOT = Path()
 
 
-def render(settings: dict):
-	st.markdown("### Ajouter un nouveau profil")
-	c1, c2 = st.columns([1, 1])
+SRC_DIR = ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+	sys.path.insert(0, str(SRC_DIR))
 
-	with c1:
-		nom = st.text_input("Nom de la personne", placeholder="Ex: Jean Dupont")
-		identifiant = st.text_input("Identifiant", placeholder="ID-001")
-		image_ajout = st.file_uploader(
-			"Importer une image du visage",
-			type=["jpg", "jpeg", "png"],
-		)
 
-		if st.button("Enregistrer le profil"):
-			if nom and identifiant and image_ajout:
-				st.success("Profil pret a etre indexe.")
-			else:
-				st.warning("Remplis tous les champs avant validation.")
+from src.save_image import pipeline_save_image
 
-	with c2:
-		st.markdown('<div class="soft-card">', unsafe_allow_html=True)
-		st.markdown("#### Previsualisation")
-		if image_ajout:
-			st.image(image_ajout, use_container_width=True)
-		else:
-			st.info("Ajoute une image pour voir l'apercu.")
-		st.markdown("</div>", unsafe_allow_html=True)
+
+def render(settings: dict):    
+    
+    st.markdown("### Ajouter un nouveau profil") 
+      
+    c1, c2 = st.columns([1, 1])   
+    
+    with c1:        
+        
+        nom = st.text_input(
+            "Nom de la personne", placeholder="Ex: Jean Dupont"
+            )    
+            
+        identifiant = st.text_input("Identifiant" , placeholder="ID-001")        
+        image_ajout = st.file_uploader(            "Importer une image du visage",            type="image/*",        )        
+        if st.button("Enregistrer le profil"):            
+            if not (nom and identifiant and image_ajout):                
+                st.warning("Remplis tous les champs avant validation.")            
+            else:                
+                uploads = ROOT / "data" / "uploads"                #uploads.mkdir(parents=True, exist_ok=True)                
+                suffix = Path(image_ajout.name).suffix
+                timestamp = int(time.time())                
+                out_name = f"{nom}{identifiant}_{timestamp}{suffix}"                
+                out_path = uploads / out_name     
+                
+        
+                with open(out_path, "wb") as f:                    
+                    f.write(image_ajout.getbuffer())    
+                    try:                    
+                        result = pipeline_save_image(                        image_path=str(out_path),                        person_name=nom,                        embeddings_path=str(ROOT / "data" / "embeddings.npy"),                        mapping_path=str(ROOT / "data" / "mapping.json"),                        preview=False,                    )                    
+                        st.success(f"Profil enregistré: index {result['index']} — {result['name']}")                    
+                        st.write("Ready for the next 🔥🔥")         
+                        st.balloons()               
+                        
+                    except Exception as e:                    
+                        st.error(f"Erreur lors de l'enregistrement: {e}")    
+    with c2:        
+        st.markdown('<div class="soft-card">',  unsafe_allow_html=True)        
+        st.markdown("#### Previsualisation")        
+        if image_ajout:            
+            st.image(image_ajout, width="stretch")        
+        else:            
+            st.info("Ajoute une image pour voir l'apercu.")        
+            st.markdown("</div>", unsafe_allow_html=True)
+
+if __name__ == "main":
+    print(ROOT)

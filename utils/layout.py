@@ -132,12 +132,14 @@ def sidebar():
         st.divider()
         with st.expander("🛠️ Paramètres Avancés"):
             score_min = st.slider("Seuil de confiance", 0.10, 1.00, 0.65, 0.01)
+            rate_time = st.slider("Rate Time(ms)" , 100 , 1000 , 200 , 50)
             mode_temps_reel = st.toggle("Mode temps réel", value=True)
             st.color_picker("Couleur du thème")
 
     return menu, {
         "score_min": score_min,
         "mode_temps_reel": mode_temps_reel,
+        "rate_time" : rate_time
     }
 
 def header():

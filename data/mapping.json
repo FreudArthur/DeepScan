@@ -1,26 +1,30 @@
 {
   "0": {
     "name": "Mark Zuckerberg",
-    "image_path": "..\\data\\images\\markzuck.jpg"
+    "image_path": "data\\images\\markzuck.jpg"
   },
   "1": {
     "name": "Andréa",
-    "image_path": "..\\data\\images\\Androu.jpg"
+    "image_path": "data\\images\\Androu.jpg"
   },
   "2": {
     "name": "Bill Gates",
-    "image_path": "..\\data\\images\\bill.jpg"
+    "image_path": "data\\images\\bill.jpg"
   },
   "3": {
     "name": "Elon Musk",
-    "image_path": "..\\data\\images\\Elonmusk.jpg"
+    "image_path": "data\\images\\Elonmusk.jpg"
   },
   "4": {
     "name": "Laurent",
-    "image_path": "..\\data\\images\\Laurent.jpg"
+    "image_path": "data\\images\\Laurent.jpg"
   },
   "5": {
     "name": "Freud",
-    "image_path": "..\\data\\images\\freud.jpg"
+    "image_path": "data\\images\\freud.jpg"
+  },
+  "6": {
+    "name": "Jeff Bezos",
+    "image_path": "data\\uploads\\Jeff BezosID-002_1777409543.webp"
   }
 }

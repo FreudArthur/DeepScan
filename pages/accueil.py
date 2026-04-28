@@ -17,14 +17,14 @@ def render(settings: dict):
 		
 	col1, col2 = st.columns(2)
 	with col1:
-			if st.button("➕ Ajouter visage", use_container_width=True):
+			if st.button("➕ Ajouter visage", width="stretch"):
 				st.switch_page("pages/add_user.py")
 	with col2:
-			if st.button("🔍 Verifier", use_container_width=True):
+			if st.button("🔍 Verifier", width="stretch"):
 				st.switch_page("pages/verif.py")
 
 	
 	st.markdown('<div class="soft-card">', unsafe_allow_html=True)
 	st.markdown("#### Apercu visuel")
-	st.image("photos\\test_bill_Gates.png", use_container_width=True)
+	st.image("photos\\test_bill_Gates.png", width="stretch")
 	st.markdown("</div>", unsafe_allow_html=True)
