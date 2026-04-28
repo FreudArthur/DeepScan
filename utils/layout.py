@@ -110,15 +110,14 @@ def setup_page():
     )
 
 def sidebar():
-    
     with st.sidebar:
         st.markdown("### Deep Scan")
         st.caption("Interface de démonstration")
 
         menu = option_menu(
             menu_title="Navigation",
-            options=["Accueil", "Ajout visage", "Vérification"],
-            icons=["house", "person-plus", "shield-check"],
+            options=["Accueil", "Ajout visage", "Verification", "Stats", "Aide"],
+            icons=["house", "person-plus", "shield-check", "bar-chart", "question-circle"],
             menu_icon="camera",
             default_index=0,
             styles={
@@ -136,7 +135,10 @@ def sidebar():
             mode_temps_reel = st.toggle("Mode temps réel", value=True)
             st.color_picker("Couleur du thème")
 
-    return (menu , score_min , mode_temps_reel)
+    return menu, {
+        "score_min": score_min,
+        "mode_temps_reel": mode_temps_reel,
+    }
 
 def header():
     st.title("🚀 Deep Scan")
@@ -158,3 +160,10 @@ def presentation():
     )
 
     st.write("")
+
+
+def metrics_row(score_min: float):
+    col_a, col_b, col_c = st.columns(3)
+    col_a.metric("Visages enroles", "128", "+4 aujourd'hui")
+    col_b.metric("Precision estimee", "97.3%", "+0.8%")
+    col_c.metric("Seuil actif", f"{score_min:.2f}", "personnalise")

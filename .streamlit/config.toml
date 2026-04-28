@@ -1,2 +1,6 @@
 [client]
 showSidebarNavigation = false
+
+[server]
+runOnSave = true
+watchExternalFiles = true
