@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import cv2
 from src.pretrained import MTCNN_MODEL , EMBED_MODEL
 
+import streamlit as st
+
 # Charger une image et retourner un ndarray RGB
 
 def load_image(path: str) -> np.ndarray:
@@ -80,6 +82,7 @@ def show_image(image_original)-> None:
     
 
 # Transformer une image en embedding
+st.cache_data
 def img_to_embedding(image_original) -> np.ndarray:
     """
     Transforme l'image originale en vecteur d'embedding.
@@ -90,7 +93,7 @@ def img_to_embedding(image_original) -> np.ndarray:
     face_detect = MTCNN_MODEL(image_original)
 
     if face_detect is None:
-        raise ValueError("Aucun visage détecté pour calculer l'embedding.")
+        raise ValueError("Aucun visage détecté sur la photo.Veuillez réessayez")
 
     face_detect = face_detect.unsqueeze(0)
 

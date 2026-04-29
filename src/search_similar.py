@@ -9,13 +9,14 @@ from facenet_pytorch import MTCNN, InceptionResnetV1
 import yaml
 import json
 import os
-
+import streamlit as st
 from img_preprocessing import load_image , img_to_embedding
 from save_image import load_mapping_strictly 
 from search_similar_pre import calc_distance_with_faiss ,find_path
 
 
 # Version avec le fichier déjà eregistrer en base
+st.cache_data
 def recognize_face(
     image_path: str,
     embeddings_path: str = "\\data\\embeddings.npy",
@@ -114,7 +115,7 @@ def recognize_face(
 
 
 # Version Streamlit simplifiee: charge la base et mapping directement depuis les fichiers. Le fichier qui rentre est un ndarray
-
+st.cache_data
 def recognize_face_from_numpy(
     image_array,
     embeddings_path: str = "../data/embeddings.npy",
