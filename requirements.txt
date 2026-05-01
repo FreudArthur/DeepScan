@@ -9,4 +9,5 @@ matplotlib
 streamlit
 streamlit_option_menu
 streamlit_autorefresh
-streamlit_webrtc
+streamlit-webrtc==0.47.1
+tornado==6.3.3
