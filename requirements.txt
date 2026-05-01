@@ -2,7 +2,7 @@ numpy
 pandas
 facenet-pytorch
 faiss-cpu
-opencv-python
+opencv-python-headless
 torch
 matplotlib
 
