@@ -1,12 +1,5 @@
-import torch
 import numpy as np
-import matplotlib.pyplot as plt
-import cv2
-import faiss
-import torch
 from pathlib import Path
-from facenet_pytorch import MTCNN, InceptionResnetV1
-import yaml
 import json
 import os
 

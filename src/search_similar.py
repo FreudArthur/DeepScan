@@ -1,14 +1,8 @@
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-import cv2
-import faiss
 import torch
 from pathlib import Path
-from facenet_pytorch import MTCNN, InceptionResnetV1
-import yaml
-import json
-import os
 import streamlit as st
 from img_preprocessing import load_image , img_to_embedding
 from save_image import load_mapping_strictly 
