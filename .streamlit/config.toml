@@ -1,5 +1,8 @@
 [client]
 showSidebarNavigation = false
 
+[theme]
+primaryColor = "#1C83E1" 
+
 [server]
 runOnSave = true

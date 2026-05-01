@@ -11,6 +11,7 @@ if str(SRC_DIR) not in sys.path:
 
 
 from src.save_image import pipeline_save_image
+from src.csv_logger import log_requete
 
 
 def render(settings: dict):    
@@ -53,10 +54,22 @@ def render(settings: dict):
                         )                    
                         st.success(f"Profil enregistré: index {result['index']} — {result['name']}")                    
                         st.write("Ready for the next 🔥🔥")         
-                        st.balloons()               
+                        st.balloons()
+                        log_requete(
+                            session_id=settings.get("session_name", "main"),
+                            mode="Enrollment",
+                            status="enrollment",
+                            personne=nom,
+                        )                       
                         
                     except Exception as e:                    
-                        st.error(f"Erreur lors de l'enregistrement: {e}")    
+                        st.error(f"Erreur lors de l'enregistrement: {e}")
+                        log_requete(
+                            session_id=settings.get("session_name", "main"),
+                            mode="Enrollment",
+                            status="error",
+                            personne=nom,
+                        )    
     with c2:        
         st.markdown('<div class="soft-card">',  unsafe_allow_html=True)        
         st.markdown("#### Previsualisation")        

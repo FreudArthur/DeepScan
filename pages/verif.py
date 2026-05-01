@@ -9,6 +9,7 @@ from streamlit_autorefresh import st_autorefresh
 
 from src.video_prepreocessing import VideoProcessor
 from src.search_similar import recognize_face , recognize_face_from_numpy
+from src.csv_logger import log_requete
 
 
 # Add src to path for imports
@@ -17,18 +18,14 @@ SRC_DIR = ROOT / "src"
 
 
 
-# Ensure src is importable
-ROOT = Path(__file__).resolve().parent.parent
-SRC_DIR = ROOT / "src"
-
 def recognice_face(image_array):
     return recognize_face_from_numpy(
-						image_array=image_array,
-						embeddings_path=str(st.session_state.get("session_paths", {}).get("embeddings_path", ROOT / "data" / "embeddings.npy")),
-						mapping_path=str(st.session_state.get("session_paths", {}).get("mapping_path", ROOT / "data" / "mapping.json")),
-						k=5,
-						temperature=0.3,
-					)
+		image_array=image_array,
+		embeddings_path=str(st.session_state.get("session_paths", {}).get("embeddings_path", ROOT / "data" / "embeddings.npy")),
+		mapping_path=str(st.session_state.get("session_paths", {}).get("mapping_path", ROOT / "data" / "mapping.json")),
+		k=5,
+		temperature=0.3,
+	)
     
 
     
@@ -41,11 +38,10 @@ def render(settings: dict):
 	if "mode" not in st.session_state:
 		st.session_state.mode = "Upload"
 
-	mode = st.selectbox("Mode", ["Upload" , "Photo", "Vidéo"])
+	mode = st.selectbox("Mode", ["Upload", "Photo", "Vidéo"])
 
 	with check_col_1:
-     
-    # Mode pour upload une image 
+		# Mode pour upload une image 
 		if mode == "Upload":
 			image_test = st.file_uploader(
 				"Charger une image a verifier",
@@ -61,16 +57,13 @@ def render(settings: dict):
 			if st.button("Lancer la verification"):
 				if not image_test:
 					st.error("Ajoute une image avant de lancer la verification.")
-			
 				else:
-					#st.image(image=image_test)
 					file_bytes = np.asarray(bytearray(image_test.read()), dtype=np.uint8)
 					image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 					if image is None:
 						st.error("Impossible de lire l'image uploadée.")
 						return
 					image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-     
 
 					try:
 						res = recognice_face(
@@ -80,16 +73,33 @@ def render(settings: dict):
 						if not best:
 							st.warning("Aucun match trouve.")
 							st.session_state['verify_result'] = None
+							log_requete(
+								session_id=settings.get("session_name", "main"),
+								mode="Upload",
+								status="rejet",
+								confiance=0.0,
+							)
 						else:
 							st.success("Analyse terminee.")
 							st.session_state['verify_result'] = best
+							log_requete(
+								session_id=settings.get("session_name", "main"),
+								mode="Upload",
+								status="valide" if best['probability'] > 0.75 else "faible",
+								confiance=best['probability'],
+								personne=best.get('name', '--'),
+							)
 
 					except Exception as e:
 						st.error(f"Erreur lors de la recherche: {e}")
+						log_requete(
+							session_id=settings.get("session_name", "main"),
+							mode="Upload",
+							status="error",
+						)
 		
-  # Mode pour prendre une photo en direct
+		# Mode pour prendre une photo en direct
 		elif mode == "Photo":
-      
 			camera_image = st.camera_input(
 				"Prendre une photo à analyser",
 				key="verify_camera_input",
@@ -108,28 +118,40 @@ def render(settings: dict):
 						st.error("Impossible de lire la photo capturée.")
 						return
 					image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)	
-    				
-			
-					
 
 					try:
-						res = recognice_face(
-							image_array=image)
-
+						res = recognice_face(image_array=image)
 						best = res.get("best_match") if res else None
 						if not best:
 							st.warning("Aucun match trouve.")
 							st.session_state['verify_result'] = None
+							log_requete(
+								session_id=settings.get("session_name", "main"),
+								mode="Photo",
+								status="rejet",
+								confiance=0.0,
+							)
 						else:
 							st.success("Analyse terminee.")
 							st.session_state['verify_result'] = best
+							log_requete(
+								session_id=settings.get("session_name", "main"),
+								mode="Photo",
+								status="valide" if best['probability'] > 0.75 else "faible",
+								confiance=best['probability'],
+								personne=best.get('name', '--'),
+							)
 
 					except Exception as e:
 						st.error(f"Erreur lors de la recherche: {e}")
-     
-     
-    
-		if mode =="Vidéo":
+						log_requete(
+							session_id=settings.get("session_name", "main"),
+							mode="Photo",
+							status="error",
+						)
+		
+		# Mode vidéo en temps réel
+		elif mode == "Vidéo":
 			st.subheader("📹 Analyse vidéo en temps réel")
 			
 			ctx = webrtc_streamer(
@@ -144,17 +166,15 @@ def render(settings: dict):
 				results = getattr(ctx.video_processor, "results", None) if ctx.video_processor else None
 
 				if results:
-						best = results.get("best_match")
-						if best:
-							st.session_state["verify_result"] = best
-							st.success(f"{best['name']} ({best['probability']:.2%})")
+					best = results.get("best_match")
+					if best:
+						st.session_state["verify_result"] = best
+						st.success(f"{best['name']} ({best['probability']:.2%})")
 				else:
-						st.caption("En attente du premier résultat...")
-							
+					st.caption("En attente du premier résultat...")
+						
 			else:
 				st.warning("Cliquez sur **Start** en haut pour démarrer la caméra")
-			
-
 
 	with check_col_2:
 		st.markdown('<div class="soft-card">', unsafe_allow_html=True)
@@ -174,7 +194,6 @@ def render(settings: dict):
 			else:
 				st.error(f"Prédiction : {name}")
 				st.toast("Reconnaissance faible")
-			
 			
 			st.metric(label="Score de confiance", value=f"{score:.4f}")
 			

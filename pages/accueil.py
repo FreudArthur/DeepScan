@@ -60,7 +60,7 @@ def render(settings: dict):
         """)
  
 	with col2:
-		st.info("💡 Astuce : Plus tu ajoutes de visages, plus ton système devient précis.")
+		st.info("💡 Astuce : Plus tu ajoutes de visages, plus le système devient précis.")
 
       	
 	st.markdown("</div>", unsafe_allow_html=True)

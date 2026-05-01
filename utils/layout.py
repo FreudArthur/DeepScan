@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import re
 import shutil
 
@@ -9,7 +10,6 @@ from streamlit_option_menu import option_menu
 ROOT = Path()
 MAIN_DATA_DIR = ROOT / "data"
 CACHE_SESSIONS_DIR = ROOT / "cache" / "sessions"
-
 
 def _slugify(value: str) -> str:
     value = value.strip().lower()
@@ -71,6 +71,20 @@ def _delete_temp_session(session_name: str) -> None:
     session_dir = CACHE_SESSIONS_DIR / safe_name
     if session_dir.exists() and session_dir.is_dir():
         shutil.rmtree(session_dir)
+        print(f"Session supprimée {session_name}")
+
+# A revoir : Soit le maintien uniquement le .env ou alors le secrets.toml mais pas la variable DEFAULT_MAIN_SESSION_PASSWORD
+
+def _get_main_session_password() -> str | None:
+    password = st.secrets.get("main_session_password")
+    if password:
+        return str(password).strip()
+
+    password = os.getenv("DEEPSCAN_MAIN_SESSION_PASSWORD", "").strip()
+    if password:
+        return password
+
+    
 
 def setup_page():
         
@@ -184,7 +198,38 @@ def sidebar():
     with st.sidebar:
         st.markdown("### Deep Scan")
         st.caption("Interface de démonstration")
+        
+        st.divider()
+        with st.expander("⚙️ Session principale", expanded=False):
+            main_session_unlocked = st.session_state.get("main_session_unlocked", False)
+            configured_password = _get_main_session_password()
 
+            if not main_session_unlocked:
+                st.markdown("#### Session protégée")
+                password = st.text_input(
+                    "Mot de passe pour la base principale",
+                    type="password",
+                    key="main_session_password_input",
+                    placeholder="Entrez le mot de passe",
+                )
+                if st.button("Déverrouiller la base originale"):
+                    if password and password == configured_password:
+                        st.session_state["main_session_unlocked"] = True
+                        main_session_unlocked = True
+                        st.success("Base principale déverrouillée.")
+                    else:
+                        st.error("Mot de passe incorrect.")
+            else:
+                st.success("Base principale déverrouillée.")
+                if st.button("Revenir à la session temporaire"):
+                    st.session_state["main_session_unlocked"] = False
+                    st.session_state["session_paths"] = _ensure_temp_session(
+                        st.session_state.get("temp_session_name", "test-cache"),
+                        "Copier la base principale",
+                    )
+                    st.session_state["temp_session_enabled"] = True
+                    st.rerun()
+        st.divider()
         menu = option_menu(
             menu_title="Navigation",
             options=["Accueil", "Ajout visage", "Verification", "Stats", "Aide"],
@@ -209,11 +254,8 @@ def sidebar():
 
         st.divider()
         with st.expander("🧪 Session temporaire", expanded=False):
-            temp_session_enabled = st.toggle(
-                "Activer une session temporaire",
-                value=st.session_state.get("temp_session_enabled", False),
-                key="temp_session_enabled_widget",
-            )
+            temp_session_enabled = not main_session_unlocked
+            st.caption("La session temporaire est active par défaut. Le mot de passe ouvre la base principale.")
             temp_session_name = st.text_input("Nom de la session", value=st.session_state.get("temp_session_name", "test-cache"))
             auto_delete_on_disable = st.checkbox(
                 "Supprimer automatiquement à la désactivation",
@@ -231,38 +273,44 @@ def sidebar():
                 session_paths = _ensure_temp_session(session_name_value, source_mode)
                 st.session_state["temp_session_name"] = session_paths["session_name"]
                 st.session_state["temp_session_enabled"] = True
+                st.session_state["main_session_unlocked"] = False
                 st.session_state["session_paths"] = session_paths
+                st.session_state["temp_session_deleted"] = False
                 st.success(f"Session '{session_paths['session_name']}' prête dans le cache.")
 
             if st.button("Supprimer la session active"):
                 session_name_to_delete = st.session_state.get("temp_session_name", temp_session_name)
                 _delete_temp_session(session_name_to_delete)
+                st.session_state["session_paths"] = _build_session_paths(True, session_name_to_delete)
                 st.session_state["temp_session_enabled"] = False
-                st.session_state["temp_session_enabled_widget"] = False
-                st.session_state["session_paths"] = _build_session_paths(False, "main")
-                st.success(f"Session '{_slugify(session_name_to_delete)}' supprimée.")
+                st.session_state["main_session_unlocked"] = False
+                st.session_state["temp_session_deleted"] = True
+                st.success(f"Session '{_slugify(session_name_to_delete)}' supprimée du cache.")
 
-            previous_enabled = st.session_state.get("_temp_session_prev_enabled", False)
-            if previous_enabled and not temp_session_enabled and auto_delete_on_disable:
-                session_name_to_delete = st.session_state.get("temp_session_name", temp_session_name)
-                _delete_temp_session(session_name_to_delete)
-                st.info(f"Session '{_slugify(session_name_to_delete)}' supprimée automatiquement.")
-
-            if temp_session_enabled:
+            if st.session_state.get("temp_session_deleted", False):
+                st.warning("La session temporaire a été supprimée. Clique sur 'Créer / réinitialiser la session' pour la recréer.")
+            elif temp_session_enabled:
                 session_name = st.session_state.get("temp_session_name", temp_session_name)
-                session_paths = _build_session_paths(True, session_name)
-                st.session_state["temp_session_enabled"] = True
+                session_paths = _ensure_temp_session(session_name, source_mode)
                 st.session_state["session_paths"] = session_paths
+                st.session_state["temp_session_enabled"] = True
                 st.info(f"Session active: {session_paths['session_name']}")
             else:
-                st.session_state["temp_session_enabled"] = False
                 st.session_state["session_paths"] = _build_session_paths(False, "main")
+                st.session_state["temp_session_enabled"] = False
 
-            st.session_state["_temp_session_prev_enabled"] = temp_session_enabled
+            if auto_delete_on_disable and not main_session_unlocked:
+                st.caption("La suppression automatique reste disponible uniquement pour la session temporaire.")
 
     session_paths = st.session_state.get("session_paths")
     if not session_paths:
-        session_paths = _build_session_paths(False, "main")
+        session_name = st.session_state.get("temp_session_name", "test-cache")
+        if st.session_state.get("temp_session_deleted", False):
+            session_paths = _build_session_paths(True, session_name)
+        else:
+            session_paths = _ensure_temp_session(session_name, "Copier la base principale")
+            st.session_state["temp_session_enabled"] = True
+            st.session_state["main_session_unlocked"] = False
         st.session_state["session_paths"] = session_paths
 
     return menu, {
