@@ -5,6 +5,7 @@ import time
 import cv2
 import numpy as np
 from streamlit_webrtc import webrtc_streamer
+from streamlit_autorefresh import st_autorefresh
 
 from src.video_prepreocessing import VideoProcessor
 from src.search_similar import recognize_face , recognize_face_from_numpy
@@ -23,8 +24,8 @@ SRC_DIR = ROOT / "src"
 def recognice_face(image_array):
     return recognize_face_from_numpy(
 						image_array=image_array,
-						embeddings_path=str(ROOT / "data" / "embeddings.npy"),
-						mapping_path=str(ROOT / "data" / "mapping.json"),
+						embeddings_path=str(st.session_state.get("session_paths", {}).get("embeddings_path", ROOT / "data" / "embeddings.npy")),
+						mapping_path=str(st.session_state.get("session_paths", {}).get("mapping_path", ROOT / "data" / "mapping.json")),
 						k=5,
 						temperature=0.3,
 					)
@@ -33,6 +34,8 @@ def recognice_face(image_array):
     
 def render(settings: dict):
 	st.markdown("### Verifier une identite")
+	embeddings_path = settings.get("embeddings_path", str(ROOT / "data" / "embeddings.npy"))
+	mapping_path = settings.get("mapping_path", str(ROOT / "data" / "mapping.json"))
 	check_col_1, check_col_2 = st.columns(2)
 	
 	if "mode" not in st.session_state:
@@ -63,13 +66,16 @@ def render(settings: dict):
 					#st.image(image=image_test)
 					file_bytes = np.asarray(bytearray(image_test.read()), dtype=np.uint8)
 					image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+					if image is None:
+						st.error("Impossible de lire l'image uploadée.")
+						return
 					image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
      
 
 					try:
 						res = recognice_face(
 							image_array=image)
-
+						print("get it")
 						best = res.get("best_match") if res else None
 						if not best:
 							st.warning("Aucun match trouve.")
@@ -90,7 +96,7 @@ def render(settings: dict):
 			)
 
 			if camera_image:
-				st.image(camera_image, caption="Photo capturée", use_container_width=True)
+				st.image(camera_image, caption="Photo capturée", width='stretch')
 
 			if st.button("Analyser la photo", key="verify_camera_button"):
 				if not camera_image:
@@ -98,6 +104,9 @@ def render(settings: dict):
 				else: 
 					file_bytes = np.asarray(bytearray(camera_image.read()), dtype=np.uint8)
 					image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+					if image is None:
+						st.error("Impossible de lire la photo capturée.")
+						return
 					image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)	
     				
 			
@@ -121,29 +130,29 @@ def render(settings: dict):
      
     
 		if mode =="Vidéo":
-      
-			ctx = webrtc_streamer( key="vidéo",   video_processor_factory=lambda: VideoProcessor(recognice_face=recognice_face , interval=0.8))
-   
+			st.subheader("📹 Analyse vidéo en temps réel")
 			
+			ctx = webrtc_streamer(
+				key="vidéo",
+				video_processor_factory=lambda: VideoProcessor(recognice_face=recognice_face, interval=1.5)
+			)
+			
+			if ctx.state.playing:
+				st.info("✅ Caméra active — traitement en cours ")
+				st_autorefresh(interval=1000, key="video_refresh")
 
-			result_placeholder = st.empty()
+				results = getattr(ctx.video_processor, "results", None) if ctx.video_processor else None
 
-			while ctx.state.playing:
-				if ctx.video_processor:
-					results = getattr(ctx.video_processor, "results", None)
-
-					if results:
+				if results:
 						best = results.get("best_match")
-
 						if best:
-							st.session_state['verify_result'] = best
-							result_placeholder.success(f"👤 {best['name']} ({best['probability']:.2f})")
-						else:
-							result_placeholder.warning("Aucun match")
-							st.session_state['verify_result'] = None
-				
-				time.sleep(0.5)  # 🔥 important pour éviter freeze CPU
-			
+							st.session_state["verify_result"] = best
+							st.success(f"{best['name']} ({best['probability']:.2%})")
+				else:
+						st.caption("En attente du premier résultat...")
+							
+			else:
+				st.warning("Cliquez sur **Start** en haut pour démarrer la caméra")
 			
 
 

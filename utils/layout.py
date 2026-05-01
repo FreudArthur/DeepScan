@@ -1,5 +1,76 @@
+from pathlib import Path
+import re
+import shutil
+
 import streamlit as st
 from streamlit_option_menu import option_menu
+
+
+ROOT = Path()
+MAIN_DATA_DIR = ROOT / "data"
+CACHE_SESSIONS_DIR = ROOT / "cache" / "sessions"
+
+
+def _slugify(value: str) -> str:
+    value = value.strip().lower()
+    value = re.sub(r"[^a-z0-9]+", "-", value)
+    return value.strip("-") or "session-temporaire"
+
+
+def _build_session_paths(is_temp_session: bool, session_name: str) -> dict:
+    if not is_temp_session:
+        return {
+            "is_temp_session": False,
+            "session_name": "main",
+            "data_dir": str(MAIN_DATA_DIR),
+            "embeddings_path": str(MAIN_DATA_DIR / "embeddings.npy"),
+            "mapping_path": str(MAIN_DATA_DIR / "mapping.json"),
+            "uploads_dir": str(MAIN_DATA_DIR / "uploads"),
+        }
+
+    safe_name = _slugify(session_name)
+    session_dir = CACHE_SESSIONS_DIR / safe_name
+    return {
+        "is_temp_session": True,
+        "session_name": safe_name,
+        "data_dir": str(session_dir),
+        "embeddings_path": str(session_dir / "embeddings.npy"),
+        "mapping_path": str(session_dir / "mapping.json"),
+        "uploads_dir": str(session_dir / "uploads"),
+    }
+
+
+def _ensure_temp_session(session_name: str, source_mode: str) -> dict:
+    session_paths = _build_session_paths(True, session_name)
+    session_dir = Path(session_paths["data_dir"])
+    uploads_dir = Path(session_paths["uploads_dir"])
+    session_dir.mkdir(parents=True, exist_ok=True)
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+
+    embeddings_path = Path(session_paths["embeddings_path"])
+    mapping_path = Path(session_paths["mapping_path"])
+
+    if source_mode == "Copier la base principale":
+        if (MAIN_DATA_DIR / "embeddings.npy").exists() and not embeddings_path.exists():
+            shutil.copy2(MAIN_DATA_DIR / "embeddings.npy", embeddings_path)
+        if (MAIN_DATA_DIR / "mapping.json").exists() and not mapping_path.exists():
+            shutil.copy2(MAIN_DATA_DIR / "mapping.json", mapping_path)
+    else:
+        if not embeddings_path.exists():
+            import numpy as np
+
+            np.save(embeddings_path, np.empty((0, 512), dtype="float32"))
+        if not mapping_path.exists():
+            mapping_path.write_text("{}", encoding="utf-8")
+
+    return session_paths
+
+
+def _delete_temp_session(session_name: str) -> None:
+    safe_name = _slugify(session_name)
+    session_dir = CACHE_SESSIONS_DIR / safe_name
+    if session_dir.exists() and session_dir.is_dir():
+        shutil.rmtree(session_dir)
 
 def setup_page():
         
@@ -136,10 +207,69 @@ def sidebar():
             mode_temps_reel = st.toggle("Mode temps réel", value=True)
             st.color_picker("Couleur du thème")
 
+        st.divider()
+        with st.expander("🧪 Session temporaire", expanded=False):
+            temp_session_enabled = st.toggle(
+                "Activer une session temporaire",
+                value=st.session_state.get("temp_session_enabled", False),
+                key="temp_session_enabled_widget",
+            )
+            temp_session_name = st.text_input("Nom de la session", value=st.session_state.get("temp_session_name", "test-cache"))
+            auto_delete_on_disable = st.checkbox(
+                "Supprimer automatiquement à la désactivation",
+                value=True,
+                key="temp_session_auto_delete",
+            )
+            source_mode = st.selectbox(
+                "Point de départ",
+                ["Copier la base principale", "Base vide"],
+                index=0,
+            )
+
+            if st.button("Créer / réinitialiser la session"):
+                session_name_value = temp_session_name or "test-cache"
+                session_paths = _ensure_temp_session(session_name_value, source_mode)
+                st.session_state["temp_session_name"] = session_paths["session_name"]
+                st.session_state["temp_session_enabled"] = True
+                st.session_state["session_paths"] = session_paths
+                st.success(f"Session '{session_paths['session_name']}' prête dans le cache.")
+
+            if st.button("Supprimer la session active"):
+                session_name_to_delete = st.session_state.get("temp_session_name", temp_session_name)
+                _delete_temp_session(session_name_to_delete)
+                st.session_state["temp_session_enabled"] = False
+                st.session_state["temp_session_enabled_widget"] = False
+                st.session_state["session_paths"] = _build_session_paths(False, "main")
+                st.success(f"Session '{_slugify(session_name_to_delete)}' supprimée.")
+
+            previous_enabled = st.session_state.get("_temp_session_prev_enabled", False)
+            if previous_enabled and not temp_session_enabled and auto_delete_on_disable:
+                session_name_to_delete = st.session_state.get("temp_session_name", temp_session_name)
+                _delete_temp_session(session_name_to_delete)
+                st.info(f"Session '{_slugify(session_name_to_delete)}' supprimée automatiquement.")
+
+            if temp_session_enabled:
+                session_name = st.session_state.get("temp_session_name", temp_session_name)
+                session_paths = _build_session_paths(True, session_name)
+                st.session_state["temp_session_enabled"] = True
+                st.session_state["session_paths"] = session_paths
+                st.info(f"Session active: {session_paths['session_name']}")
+            else:
+                st.session_state["temp_session_enabled"] = False
+                st.session_state["session_paths"] = _build_session_paths(False, "main")
+
+            st.session_state["_temp_session_prev_enabled"] = temp_session_enabled
+
+    session_paths = st.session_state.get("session_paths")
+    if not session_paths:
+        session_paths = _build_session_paths(False, "main")
+        st.session_state["session_paths"] = session_paths
+
     return menu, {
         "score_min": score_min,
         "mode_temps_reel": mode_temps_reel,
-        "rate_time" : rate_time
+        "rate_time" : rate_time,
+        **session_paths,
     }
 
 def header():

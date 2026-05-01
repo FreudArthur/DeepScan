@@ -1,4 +1,5 @@
-import sys
+
+""" import sys
 import time
 from pathlib import Path
 
@@ -224,4 +225,4 @@ def render(settings: dict):
 				st.write("Score: --")
 				st.progress(0)
 
-		st.markdown("</div>", unsafe_allow_html=True)
+		st.markdown("</div>", unsafe_allow_html=True) """
