@@ -5,6 +5,8 @@ faiss-cpu
 opencv-python
 torch
 matplotlib
-yaml
+
 streamlit
 streamlit_option_menu
+streamlit_autorefresh
+streamlit_webrtc
