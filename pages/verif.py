@@ -200,10 +200,10 @@ def render(settings: dict):
 			if result.get('image_path'):
 				img_path = result.get('image_path')
 				if Path(img_path).exists():
-					st.image(str(img_path), width="stretch")
+					st.image(Path(str(img_path)), width="stretch")
      
-			vider = st.button("Vider réponse")
-			if vider:
+			
+			if  st.button("Vider réponse"):
 				st.session_state['verify_result'] = None
 		else:
 			st.write("Nom predit: --")
