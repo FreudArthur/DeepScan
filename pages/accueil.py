@@ -1,5 +1,5 @@
 import streamlit as st
-
+from pathlib import Path
 from utils.layout import metrics_row, presentation
 
 
@@ -41,7 +41,7 @@ def render(settings: dict):
 	
 	st.markdown('<div class="soft-card">', unsafe_allow_html=True)
 	st.markdown("#### Apercu visuel")
-	st.image("photos/test_bill_Gates.png", width="stretch")
+	st.image(Path("photos/test_bill_Gates.png"), width="stretch")
  
 	col1 , col2 = st.columns(2)
  
