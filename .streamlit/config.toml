@@ -2,7 +2,7 @@
 showSidebarNavigation = false
 
 [theme]
-primaryColor = "#1C83E1" 
+primaryColor = "#147ddf" 
 
 [server]
 runOnSave = true

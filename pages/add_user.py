@@ -21,17 +21,45 @@ def render(settings: dict):
     mapping_path = settings.get("mapping_path", str(ROOT / "data" / "mapping.json"))
     uploads_dir = Path(settings.get("uploads_dir", str(ROOT / "data" / "uploads")))
     uploads_dir.mkdir(parents=True, exist_ok=True)
-      
+    
+    if "mode_ajout" not in st.session_state:
+        st.session_state.mode_ajout = None
+    
     c1, c2 = st.columns([1, 1])   
     
     with c1:        
+        
+        col1_1 , col1_2 = st.columns(2)
+        
+        with col1_1 :
+             if st.button("📂 Upload Image"):
+                st.session_state.mode_ajout = "upload"
+        
+        with col1_2:
+            if st.button("📷 Prendre une photo"):
+                st.session_state.mode_ajout = "camera"
         
         nom = st.text_input(
             "Nom de la personne", placeholder="Ex: Jean Dupont"
             )    
             
-        identifiant = st.text_input("Identifiant" , placeholder="ID-001")        
-        image_ajout = st.file_uploader("Importer une image du visage",            type="image/*",        )        
+        identifiant = st.text_input("Identifiant" , placeholder="ID-001") 
+        
+        # A ce niveau je mets l'option de soit uploader ou soit camera
+        
+        image_ajout = None
+        
+        if st.session_state.mode_ajout == "upload":    
+            image_ajout = st.file_uploader("Importer une image du visage", type="image/*") 
+             
+        elif  st.session_state.mode_ajout == "camera" :
+            image_ajout = st.camera_input(
+				"Prendre une photo",
+				key="verify_camera_input",
+			)
+            
+  
+          
         if st.button("Enregistrer le profil"):            
             if not (nom and identifiant and image_ajout):                
                 st.warning("Remplis tous les champs avant validation.")            
